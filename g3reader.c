@@ -13,7 +13,6 @@
 #define F 0x7e
 #define A 0x03
 #define UA 0x07
-int
 volatile int STOP=FALSE;
 int state = 0;
 
@@ -112,7 +111,7 @@ state = 0;
 i= 0;}
 break;
 }
-
+}
 if(state==5) STOP=TRUE;
 printf("%x\n", buf[0]);
 
