@@ -12,16 +12,15 @@
 #define TRUE 1
 #define F 0x7e
 #define A 0x03
-#define UA 0x07
-int
+#define UA 0x07 
 volatile int STOP=FALSE;
-int state = 0;
 
 void listen_trama(char* arg){
  int fd,c, res, i=0;
     struct termios oldtio,newtio;
  char buf[255];
     char aux[255];
+    int state = 0;
 
 fd = open(arg, O_RDWR | O_NOCTTY );
     if (fd <0) {exit(-1); }
@@ -52,71 +51,78 @@ fd = open(arg, O_RDWR | O_NOCTTY );
 //   }
 
 	while (STOP==FALSE) {
-res = read(fd,buf,1);
-aux[i] = buf[0];
-switch(state){
-case 0:
-{		
-if(aux[i] == F){
-state = 1;
-i++;
-}
-else{
-state = 0;
-}
-break;
-}
-case 1:{
-if(aux[i] == F){
-state = 1;
-}
-else if(aux[i] == A){
-state = 2;
-i++;		
-}
-else {state = 0;
-i=0;}
-break;}
+/*		res = read(fd,buf,1);
+		aux[i] = buf[0];
+		i++;
+		if(i==5) STOP=TRUE;
+		printf("%x\n", buf[0]);*/
+		
+		res = read(fd,buf,1);
+		aux[i] = buf[0];
+		switch(state){
+			case 0:{
+				printf("Estado Start");		
+				if(aux[i] == F){
+					state = 1;
+					i++;
+				} else{
+					state = 0;
+				}
+				break;
+			}
+			case 1:{
+				if(aux[i] == F){
+					state = 1;
+				} else if(aux[i] == A){
+					state = 2;
+					i++;		
+				} else {
+					state = 0;
+					i=0;
+				}
+				break;
+			}
+			case 2:{
+				if (aux[i] == F){
+					state = 1;
+					i=1;
+				} else if(aux[i] == A) {
+					state = 3;
+					i++;
+				} else {
+					state = 0;
+					i=0;
+				}	
+				break;
+			}
+			case 3:{
+				if (aux[i] == F){
+					state = 1;
+					i=1;
+				} else if (aux[i] == (A^A)){
+					state = 4;
+					i++;
+				} else{ 
+					state = 0;
+					i= 0;
+				}
+				break;
+			}
+			case 4:{
+				if(aux[i] == F){
+					state = 5;	
+					printf("TRAMA confirmed!\n");
+				} else{
+					state = 0;
+					i= 0;
+				}
+				break;
+			}
+		}
+		if(state==5) STOP=TRUE;
+		printf("%x\n", buf[0]);
+	}
 
-case 2:{
-if (aux[i] == F){
-state = 1;
-i=1;}
-else if(aux[i] == A) {
-state = 3;
-i++;
-}
-else {
-state = 0;
-i=0;}	
-break;	}
-
-case 3:{
-if (aux[i] == F){
-state = 1;
-i=1;}
-else if (aux[i] == (A^A)){
-state = 4;
-i++;}
-else{ 
-state = 0;
-i= 0;}
-break;}
-case 4:{
-if(aux[i] == F){
-state == 5;	
-printf("TRAMA confirmed!\n");
-}
-else{
-state = 0;
-i= 0;}
-break;
-}
-
-if(state==5) STOP=TRUE;
-printf("%x\n", buf[0]);
-
-}
 	printf("TEste");
 	tcsetattr(fd,TCSANOW,&oldtio);
     	close(fd);
@@ -144,12 +150,44 @@ int main(int argc, char** argv)
       exit(1);
     }
 
-	//ESCUTA
+  /*
+    Open serial port device for reading and writing and not as controlling tty
+    because we don't want to get killed if linenoise sends CTRL-C.
+  */
+
     	listen_trama(argv[1]);
 
 	sleep(2);
 
- 	printf("Write to emissor\n");
+    fd = open(argv[1], O_RDWR | O_NOCTTY );
+    if (fd <0) {perror(argv[1]); exit(-1); }
+
+    if ( tcgetattr(fd,&oldtio) == -1) { /* save current port settings */
+      perror("tcgetattr");
+      exit(-1);
+    }
+
+    bzero(&newtio, sizeof(newtio));
+    newtio.c_cflag = BAUDRATE | CS8 | CLOCAL | CREAD;
+    newtio.c_iflag = IGNPAR;
+    newtio.c_oflag = OPOST;
+
+    /* set input mode (non-canonical, no echo,...) */
+    newtio.c_lflag = 0;
+
+    newtio.c_cc[VTIME]    = 0;   /* inter-character timer unused */
+    newtio.c_cc[VMIN]     = 1;   /* blocking read until 5 chars received */
+
+
+    tcflush(fd, TCIFLUSH);
+
+    if ( tcsetattr(fd,TCSANOW,&newtio) == -1) {
+      perror("tcsetattr");
+      exit(-1);
+    }
+
+
+	printf("Write to emissor\n");
 	res = write(fd,ua, 5);
 	printf("%d bytes written\n", res);
 
