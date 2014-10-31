@@ -6,11 +6,10 @@
 
 
 
-}
 
 
 int main(int argc, char argv[]) {
 
+
 	setup();
 	return EXIT_SUCESS;
-}

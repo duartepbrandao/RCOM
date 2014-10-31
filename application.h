@@ -15,6 +15,7 @@ struct app_layer {
 	unsigned char name[PATH_MAX];
 } typdef app_layer_T;
 
+int startApp();
 int setup();
 int sendFile();
 int receiveFile();
