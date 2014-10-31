@@ -32,5 +32,5 @@ int main(int argc, char argv[]) {
 		//enviar
 	}
 
-	return EXIT_SUCESS;
+	return EXIT_SUCESS;  
 }
