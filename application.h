@@ -1,8 +1,14 @@
+#ifndef APPLICATION_H_
+#define APPLICATION_H_
+
+
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <termios.h>
 #include <stdio.h>
+#include "definitions.h"
 
 struct app_layer {
 	int status;
@@ -15,7 +21,11 @@ struct app_layer {
 	unsigned char name[PATH_MAX];
 } typdef app_layer_T;
 
+int cliStatus();
 int startApp();
 int setup();
 int sendFile();
 int receiveFile();
+
+
+#endif

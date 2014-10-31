@@ -3,13 +3,11 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <stdio.h>
-
-
-
-
+#include "application.h"
 
 int main(int argc, char argv[]) {
 
+	startApp();
 
-	setup();
 	return EXIT_SUCESS;
+}
