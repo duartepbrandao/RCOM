@@ -7,8 +7,8 @@
 
 int mode = 0;
 void print_usage(char* program){
-	 ERROR("Usage:");
-	 ERRORF("\t- %s /dev/ttyS0 send|rec <filename>", program);
+	ERROR("Usage:");
+	ERRORF("\t- %s /dev/ttyS0 send|rec <filename>", program);
 }
 
 
