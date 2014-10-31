@@ -23,7 +23,7 @@ int main(int argc, char argv[]) {
 		return EXIT_FAILURE;
 	}
 
-	mode = strcmp(argv[2],"send");
+	mode = strcmp(argv[2],"send")
 
 	if(mode){
 		//receber
