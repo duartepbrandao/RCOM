@@ -5,25 +5,50 @@
 app_layer_T settings;
 
 int startApp(){
+  start_settings();
   setup();
-
 }
 
 
 int setup(){
+  //need to setup status(sender/receiver), port, timeout and retries
 
-  start_settings();
   settings.status = cliStatus();
-
+  settings.port = cliPort();
+  //TODO:baudrate
   while (settings.status != EXIT) {
 
-    settings.port = cliPort();
+    if(settings.status == SENDER){
+      //set timeout
+      //set retransmitions
+      //send
+    }
+    else{
+      //receive
+    }
+  }
+  return 0
+}
+
+int cliTimeout(){
+  printf("Enter a timeout value to use(seconds): \n\n");
+  int choice = -1;
+  char temp[MAX_STRING_SIZE];
+
+  fgets((char*) temp, MAX_STRING_SIZE, stdin);
+  sscanf(temp, "%d", &choice);
+
+  while ( choice < 0 ){
+    printf("Time must be positive!\n\n");
+    fgets((char*) temp, MAX_STRING_SIZE, stdin);
+    sscanf(temp, "%d", &choice);
   }
 
+  return choice;
 }
 
 int cliPort(){
-  printf(" \ Input a Serial Port to use: \n\n");
+  printf("Enter a Serial Port to use: \n\n");
 
   int choice = -1;
   char temp[MAX_STRING_SIZE];
