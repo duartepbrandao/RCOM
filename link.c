@@ -1,20 +1,35 @@
-<<<<<<< HEAD
 #include "link.h"
 #include <sys/type.h>
-=======
-#include <sys/types.h>
->>>>>>> origin/master
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <termios.h>
 #include <stdio.h>
-<<<<<<< HEAD
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
 #include <strings.h>
 
+enum frameFields {
+	START_FLAG, ADDR, CTRL, BCC1, DATA, BCC2, END_FLAG
+};
+
+#define TRANSMITTER 0
+#define RECEIVER 1
+
+#define FLAG 0x7E
+#define ADDR_TRANS 0x03
+#define ADDR__REC_RESP 0x03
+#define ADDR_REC 0x01
+#define ADDR_TRANS_RESP 0x01
+#define CTRL_SET 0x03
+#define CTRL_UA 0x07
+#define CTRL_DIST 0x0B
+
+#define FALSE 0
+#define TRUE 1
+
+volatile int STOP=FALSE;
 
 linkLayer_t link;
 unsigned int isLinkInit = 0;
@@ -28,7 +43,11 @@ unsigned int isDefaultFER = 0;
 struct termios oldtio, newtio;
 
 int open_port_file(unsigned int port);
+int close_port_file(int fd);
 int send_set(int fd);
+int rec_set(int fd);
+int send_ua(int fd);
+int rec_ua(int fd);
 
 int llopen(unsigned int port, unsigned int flag) {
 	if (init_link(port))
@@ -118,12 +137,22 @@ int open_port_file(unsigned int port) {
 	return fd;
 }
 
+int close_port_file(int fd) {
+	if (tcsetattr(fd, TCSANOW, &oldtio) == -1) {
+		perror("tcsetattr");
+		return -1;
+	}
+	close(fd);
+
+	return 0;
+}
+
 int send_set(int fd) {
 	unsigned char SET[5];
 
 	SET[0] = FLAG;
-	SET[1] = ADDR;
-	SET[2] = C_SET;
+	SET[1] = ADDR_TRANS;
+	SET[2] = CTRL_SET;
 	SET[3] = (SET[1] ^ SET[2]);
 	SET[4] = FLAG;
 
@@ -131,17 +160,78 @@ int send_set(int fd) {
 
 	return 0;
 }
-=======
 
-#define BAUDRATE B38400
-#define _POSIX_SOURCE 1 /* POSIX compliant source */
-#define FALSE 0
-#define TRUE 1
-#define F 0x7e
-#define A 0x03
-#define UA 0x07
-volatile int STOP=FALSE;
+int rec_set(int fd) {
+	int i = START_FLAG;
 
+	while (STOP==FALSE) {
+		unsigned char c = 0;
 
-int ll_open()
->>>>>>> origin/master
+		if (read(fd, &c,1)) {
+			switch (i) {
+				case START_FLAG:
+					if (c == FLAG)
+						i = ADDR;
+					break;
+				case ADDR:
+					if (c == ADDR_TRANS) {
+						i = CTRL:
+					} else if (c != FLAG) {
+						i = START_FLAG;
+					}
+					break;
+				case CTRL:
+					if (c == CTRL_SET) {
+						i = BCC1;
+					} else if (c == FLAG) {
+						i = ADDR;
+					} else {
+						i = START_FLAG;
+					}
+					break;
+				case BCC1:
+					if (c == (ADDR_TRANS ^ CTRL_SET)) {
+						i = END_FLAG;
+					} else if (c == FLAG) {
+						i = ADDR;
+					} else {
+						i = START_FLAG;
+					}
+					break;
+				case END_FLAG:
+					if (c == FLAG) {
+						STOP == TRUE;
+					} else {
+						i = START_FLAG;
+					}
+					break;
+			}
+		}
+	}
+
+	return 0;
+}
+
+int send_ua(int fd, unsigned int flag) {
+	unsigned char UA[5];
+
+	UA[0] = FLAG;
+
+	if (flag == TRANSMITTER) {
+		UA[1] = ADDR_TRANS_RESP;
+	} else if (flag == RECEIVER) {
+		UA[1] = ADDR_REC_RESP;
+	}
+
+	UA[2] = CTRL_UA;
+	UA[3] = UA[1] ^ UA[2];
+	UA[4] = FLAG;
+
+	write(fd, UA, 5);
+
+	return 0;
+}
+
+int rec_ua(int fd, unsigned int flag) {
+
+}
