@@ -42,12 +42,18 @@ unsigned int isDefaultFER = 0;
 
 struct termios oldtio, newtio;
 
+int alarmFlag = 1;
+unsigned int alarmCount = 0;
+
 int open_port_file(unsigned int port);
 int close_port_file(int fd);
 int send_set(int fd);
 int rec_set(int fd);
 int send_ua(int fd);
-int rec_ua(int fd);
+int send_disc(int fd, unsinged int flag);
+int rec_disc(int fd, unsigned int flag);
+void alarmListener();
+int rec_ua(int fd, unsigned int flag);
 
 int llopen(unsigned int port, unsigned int flag) {
 	if (init_link(port))
@@ -68,7 +74,7 @@ int llopen(unsigned int port, unsigned int flag) {
 			return -1;
 	} else {
 		printf("ENTER A VALID STATUS!\n");
-		close_port_file(fd);
+		llclose(fd);
 		return -1;
 	}
 
@@ -232,6 +238,180 @@ int send_ua(int fd, unsigned int flag) {
 	return 0;
 }
 
-int rec_ua(int fd, unsigned int flag) {
+int send_disc(int fd, unsigned int flag) {
+	unsigned char DISC[5];
 
+	DISC[0] = FLAG;
+
+	if (flag == TRANSMITTER)
+		DISC[1] = ADDR_TRANS;
+	else if (flag == RECEIVER)
+		DISC[1] = ADDR_REC_RESP;
+
+	DISC[2] = CTRL_DISC;
+	DISC[3] = DISC[1] ^ DISC[2];
+	DISC[4] = FLAG;
+
+	write(fd, DISC, 5);
+
+	return 0;
+}
+
+int rec_disc(int fd, unsigned int flag) {
+	if (flag == TRANSMITTER) {
+		(void) siganl(SIGALRM, alarmListener);
+		alarm(link.timeout);
+		alarmFlag = 1;
+		alarmCount = 0;
+	}
+
+	unsigned char addr = 0;
+	unsigned char ctrl = 0;
+
+	int i = STAR_FLAG;
+	STOP = FALSE;
+
+	while (STOP == FALSE) {
+		unsigned char c = 0;
+
+		if (flag == TRANSMITTER) {
+			if (alarmCount >= link.numTransmissions) {
+				printf("EXCEDED NUMBER OF TRIES\n");
+				close_port_file(fd);
+				return -1;
+			} else if (alarmFlag == 0) {
+				send_disc(fd, flag);
+				alarmFlag = 1;
+				alarm(link.timeout);
+			}
+		}
+
+		if (read(fd, &c, 1)) {
+			switch (i) {
+				case START_FLAG:
+					if (c == FLAG)
+						i = ADDR;
+					break;
+				case ADDR:
+					if ((flag == TRANSMITTER && c == ADDR_REC_RESP) || (flag == RECEIVER && c == ADDR_TRANS)) {
+						addr = c;
+						i = CTRL;
+					} else if (c != FLAG) {
+						i = START_FLAG;
+					}
+					break;
+				case CTRL:
+					if (c == CTRL_DISC) {
+						ctrl = c;
+						i = BCC1;
+					} else if (c == FLAG) {
+						i = ADDR;
+					} else {
+						i = START_FLAG;
+					}
+					break;
+				case BCC1:
+					if (c == (addr ^ ctrl)) {
+						i = END_FLAG;
+					} else if (c == FLAG) {
+						i = ADDR;
+					} else {
+						i = START_FLAG;
+					}
+					break;
+				case END_FLAG:
+					if (c == FLAG) {
+						STOP = TRUE;
+					} else {
+						i = START_FLAG;
+					}
+					break;
+			}
+		}
+	}
+
+	return 0;
+}
+
+void alarmListener() {
+	alarmFlag = 1;
+	alarmCount++;
+}
+
+int rec_ua(int fd, unsigned int flag) {
+	(void) signal(SIGALRM, alarmListener);
+	alarm(link.timeout);
+
+	alarmFlag = 1;
+	alarmCount = 0;
+
+	unsigned int addr = 0;
+	unsigned int ctrl = 0;
+
+	int i = START_FLAG;
+	STOP = FALSE;
+
+	while (STOP == FALSE) {
+		unsigned char c = 0;
+
+		if (alarmCount >= link.numTransmissions) {
+			printf("EXCEDED NUMBER OF TRIES!\n");
+			close_port_file(fd);
+			return -1;
+		} else if (alarmFlag == 0) {
+			if (flag == TRANSMITTER) {
+				send_set(fd);
+			} else if (flag == RECEIVER) {
+				send_disc(fd, flag);
+			}
+
+			alarmFlag = 1;
+			alarm(link.timeout);
+		}
+
+		if (read(fd, &c, 1)) {
+			switch (i) {
+				case START_FLAG:
+					if (c == FLAG)
+						i = ADDR;
+					break;
+				case ADDR:
+					if ((flag == TRANSMITTER && c == ADDR_REC_RESP) || (flag == RECEIVER && c == ADDR_TRANS_RESP)) {
+						addr = c;
+						i = CTRL;
+					} else if (c != FLAG) {
+						i = START_FLAG;
+					}
+					break;
+				case CTRL:
+					if (c == CTRL_UA) {
+						ctrl = c;
+						i = BCC1;
+					} else if (c == FLAG) {
+						i = ADDR;
+					} else {
+						i = START_FLAG;
+					}
+					break;
+				case BCC1:
+					if (c == (addr ^ ctrl)) {
+						i = END_FLAG;
+					} else if (c == FLAG) {
+						i = ADDR;
+					} else {
+						i = START_FLAG;
+					}
+					break;
+				case END_FLAG:
+					if (c == FLAG) {
+						STOP = TRUE;
+					} else {
+						i = START_FLAG;
+					}
+					break;
+			}
+		}
+	}
+
+	return 0;
 }
