@@ -14,7 +14,7 @@ enum frameFields {
 	START_FLAG, ADDR, CTRL, BCC1, DATA, BCC2, END_FLAG
 };
 
-#define TRANSMITTER 0
+#define SENDER 0
 #define RECEIVER 1
 
 #define FLAG 0x7E
@@ -95,7 +95,7 @@ int llopen(unsigned int port, unsigned int flag) {
 			return -1;
 		if (send_ua(fd, flag))
 			return -1;
-	} else if (flag == TRANSMITTER) {
+	} else if (flag == SENDER) {
 		if (send_set(fd))
 			return -1;
 		if (rec_ua(fd, flag))
@@ -251,7 +251,7 @@ int send_ua(int fd, unsigned int flag) {
 
 	UA[0] = FLAG;
 
-	if (flag == TRANSMITTER) {
+	if (flag == SENDER) {
 		UA[1] = ADDR_TRANS_RESP;
 	} else if (flag == RECEIVER) {
 		UA[1] = ADDR_REC_RESP;
@@ -271,7 +271,7 @@ int send_disc(int fd, unsigned int flag) {
 
 	DISC[0] = FLAG;
 
-	if (flag == TRANSMITTER)
+	if (flag == SENDER)
 		DISC[1] = ADDR_TRANS;
 	else if (flag == RECEIVER)
 		DISC[1] = ADDR_REC_RESP;
@@ -286,7 +286,7 @@ int send_disc(int fd, unsigned int flag) {
 }
 
 int rec_disc(int fd, unsigned int flag) {
-	if (flag == TRANSMITTER) {
+	if (flag == SENDER) {
 		(void) signal(SIGALRM, alarmListener);
 		alarm(linklayer.timeout);
 		alarmFlag = 1;
@@ -302,7 +302,7 @@ int rec_disc(int fd, unsigned int flag) {
 	while (STOP == FALSE) {
 		unsigned char c = 0;
 
-		if (flag == TRANSMITTER) {
+		if (flag == SENDER) {
 			if (alarmCount >= linklayer.numTransmissions) {
 				printf("EXCEDED NUMBER OF TRIES\n");
 				close_port_file(fd);
@@ -321,7 +321,7 @@ int rec_disc(int fd, unsigned int flag) {
 						i = ADDR;
 					break;
 				case ADDR:
-					if ((flag == TRANSMITTER && c == ADDR_REC_RESP) || (flag == RECEIVER && c == ADDR_TRANS)) {
+					if ((flag == SENDER && c == ADDR_REC_RESP) || (flag == RECEIVER && c == ADDR_TRANS)) {
 						addr = c;
 						i = CTRL;
 					} else if (c != FLAG) {
@@ -387,7 +387,7 @@ int rec_ua(int fd, unsigned int flag) {
 			close_port_file(fd);
 			return -1;
 		} else if (alarmFlag == 0) {
-			if (flag == TRANSMITTER) {
+			if (flag == SENDER) {
 				send_set(fd);
 			} else if (flag == RECEIVER) {
 				send_disc(fd, flag);
@@ -404,7 +404,7 @@ int rec_ua(int fd, unsigned int flag) {
 						i = ADDR;
 					break;
 				case ADDR:
-					if ((flag == TRANSMITTER && c == ADDR_REC_RESP) || (flag == RECEIVER && c == ADDR_TRANS_RESP)) {
+					if ((flag == SENDER && c == ADDR_REC_RESP) || (flag == RECEIVER && c == ADDR_TRANS_RESP)) {
 						addr = c;
 						i = CTRL;
 					} else if (c != FLAG) {
@@ -616,8 +616,8 @@ int rec_resp_receiver(int fd, unsigned char * buffer, unsigned int length, unsig
 }
 
 llread(int fd, unsigned char * buffer) {
-	if (linklayer.flag == TRANSMITTER) {
-		printf("TRANSMITTER CANNOT READ FROM SERIAL PORT");
+	if (linklayer.flag == SENDER) {
+		printf("SENDER CANNOT READ FROM SERIAL PORT");
 		return -1;
 	}
 
@@ -802,7 +802,7 @@ int llclose(int fd, unsigned int flag) {
 		return -1;
 	}
 
-	if (flag == TRANSMITTER) {
+	if (flag == SENDER) {
 		if (send_disc(fd, flag))
 			return -1;
 		if (rec_disc(fd, flag))
