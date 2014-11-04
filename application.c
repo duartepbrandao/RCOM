@@ -20,7 +20,9 @@ int setup(){
 
     if(settings.status == SENDER){
       //set timeout
-      //set retransmitions
+      //set retries
+      //choose file
+      //get file size
       //send
     }
     else{
@@ -28,6 +30,59 @@ int setup(){
     }
   }
   return 0
+}
+
+int cliretries(){
+  printf("Enter the number of tries: \n\n");
+  int choice = -1;
+  char temp[MAX_STRING_SIZE];
+
+  fgets((char*) temp, MAX_STRING_SIZE, stdin);
+  sscanf(temp, "%d", &choice);
+
+  while ( choice < 0 ){
+    printf("Tries must be positive!\n\n");
+    fgets((char*) temp, MAX_STRING_SIZE, stdin);
+    sscanf(temp, "%d", &choice);
+  }
+
+  return choice;
+}
+
+char* cliChooseFile(){
+  printf("What is the path for the file?\n\n");
+
+  unsigned char *path = malloc(PATH_MAX);
+  memset(path,0,PATH_MAX);
+  fgets((char *) path, PATH_MAX, stdin);
+  path[strlen((char *) path) - 1] = '\0';
+  printf("%s\n", path);
+
+  while(validPath(path)){
+    memset(path,0,PATH_MAX);
+    fgets((char *) path, PATH_MAX, stdin);
+    path[strlen((char *) path) - 1] = '\0';
+    printf("Invalid path!");
+  }
+
+  return path;
+}
+
+int getFileSize(char* path){
+  FILE* file = fopen(path,"rb");
+  
+  fseek(file, 0L, SEEK_END);
+  int sz = ftell(fp);
+
+  fseek(file, 0L, SEEK_SET);
+
+  return sz;
+}
+
+int validPath (unsigned char * path){
+  FILE* file = fopen(path,"rb");
+
+  return !file;
 }
 
 int cliTimeout(){
