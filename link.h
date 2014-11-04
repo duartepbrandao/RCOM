@@ -7,7 +7,14 @@ typedef struct linkLayer {
 	unsigned int sequenceNumber;
 	unsigned int timeout;
 	unsigned int numTransmissions;
+	unsigned int openLink;
+	int flag;
+	unsigned int her;
+	unsigned int fer;
 } linkLayer_t;
 
-ll_open(unsigned int port, unsigned int flag);
-
+int llopen(unsigned int port, unsigned int flag);
+int llwrite(int fd, unsigned char * buffer, unsigned int length);
+int llread(int fd, unsigned char * buffer);
+int llclose(int fd, unsigned int flag);
+#endif
