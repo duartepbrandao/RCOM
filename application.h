@@ -8,14 +8,15 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <stdio.h>
+#include "link.h"
 #include "definitions.h"
 
 struct app_layer {
 	int status;
 	int port;
 	int serialPortDescriptor;
-	int packetSize;
 	int fileDescriptor;
+	int packetSize;
 	int fileSize;
 	unsigned char currentNum;
 	unsigned char name[PATH_MAX];
@@ -26,7 +27,7 @@ int cliStatus();
 int startApp();
 int setup();
 int sendFile();
-int start_settings;
+int start_settings();
 int receiveFile();
 
 

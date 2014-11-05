@@ -7,5 +7,6 @@
 #define SENDER 1
 #define RECEIVER 2
 #define EXIT 3
+#define PACKET_MAX_SIZE 65535
 
 #endif
