@@ -209,7 +209,7 @@ int rec_set(int fd) {
 					break;
 				case END_FLAG:
 					if (c == FLAG) {
-						STOP == TRUE;
+						STOP = TRUE;
 					} else {
 						i = START_FLAG;
 					}
@@ -725,7 +725,7 @@ int byteDestuffing(unsigned char * buffer, unsigned int length, unsigned char * 
 		char c = buffer[i];
 
 		if (c == OCTET_ESCAPE) {
-			c == buffer[++i];
+			c = buffer[++i];
 
 			if (c == (FLAG ^ OCTET_DIFF)) {
 				new_buffer[destuff_pos++] = FLAG;

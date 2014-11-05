@@ -1,10 +1,13 @@
 #ifndef DEFINITIONS_H_
 #define DEFINITIONS_H_
 
+#include <linux/limits.h>
+#include <stdint.h>
 #define SENDER 1
 #define RECEIVER 2
 #define EXIT 3
 #define PACKET_MAX_SIZE 65535
+#define MAX_STRING_SIZE 10000
 
 #define FLAG 0x7E
 #define ADDR_TRANS 0x03

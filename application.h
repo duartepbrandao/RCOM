@@ -20,7 +20,7 @@ struct app_layer {
 	int fileSize;
 	unsigned char currentNum;
 	unsigned char name[PATH_MAX];
-} typdef app_layer_T;
+}typedef app_layer_T;
 
 int cliPort();
 int cliStatus();
@@ -29,6 +29,21 @@ int setup();
 int sendFile();
 int start_settings();
 int receiveFile();
+int verifyFile(unsigned char * packet, unsigned int size);
+int processPacket(unsigned char * packet);
+int writeToFile(unsigned char * info, unsigned int byn_number);
+int createFile(char * name);
+int receiveControl(int var);
+int sendPacket(unsigned char * message, unsigned int size);
+int sendControl(int var);
+int cliPacket();
+int cliBaudrate();
+int cliRetries();
+char* cliChooseFile();
+int getFileSize(char* path);
+int validPath(unsigned char * path);
+int cliTimeout();
+
 
 
 #endif
