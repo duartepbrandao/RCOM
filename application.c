@@ -55,7 +55,7 @@ int receiveFile() {
 
 	while (TRUE) {
 		value = llread(settings.serialPortDescriptor, packet);
-		if (value == DISCONECTED) {
+		if (value == DISCONNECTED) {
 			if (verifyFile(packet, last_size)) {
 				printf("Error receiving packets!\n");
 			}
