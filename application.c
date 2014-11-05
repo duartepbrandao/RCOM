@@ -54,7 +54,7 @@ int receiveFile(){
   }
 
   while(1){
-    
+      llread(settings.serialPortDescriptor, buffer);
   }
 
 
