@@ -29,4 +29,6 @@
 #define CTRL_REC_READY(num) ((num << 5) | 0x05)
 #define CTRL_REC_REJECT(num) ((num << 1) | 0x01)
 
+#define DISCONECTED -50
+
 #endif
