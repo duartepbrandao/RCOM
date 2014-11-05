@@ -3,6 +3,7 @@
 
 
 app_layer_T settings;
+int corrupted_data = 0;
 
 int startApp(){
   start_settings();
@@ -53,18 +54,134 @@ int receiveFile(){
     return -1;
   }
 
-  while(1){
-      llread(settings.serialPortDescriptor, buffer);
+  int value = 0;
+  int last_size = 0;
+  unsigned char packet[PACKET_MAX_SIZE];
+
+  while(TRUE){
+    value = llread(settings.serialPortDescriptor, packet);
+    if(value == DISCONECTED){
+      if(verifyFile(packet,last_size)){
+        printf("Error receiving packets!\n" );
+      }
+      break;
+    } else{
+      last_size = value;
+      processPacket(packet);
+    }
   }
 
+  close(settings.fileDescriptor);
 
+  if(corrupted_data || value == 1){
+    printf("Data corrupted, discarding!\n");
+  }
+
+  llclose(settings.serialPortDescriptor,settings.status);
+  return 0;
+
+}
+
+int verifyFile(unsigned char * packet, unsigned int size){
+  unsigned int pos = 0;
+  struct stat stat_file;
+
+  unsigned int ctrlField = packet[pos++];
+
+  if(ctrlField != 3){
+    return 1;
+  }
+
+  unsigned char fileName[MAX_STRING_SIZE] = { 0 };
+  unsigned int fileSize = 0;
+
+  while(pos < size){
+    switch(packet[pos]){
+      case 0:
+      pos++;
+      memcpy(&fileSize,&packet[pos + 1], packet[pos]);
+      i += packet[pos] +1;
+
+      if(settings.fileSize != fileSize){
+        return 1;
+      }
+
+      if(fstat(settings.fileDescriptor, &stat_file) == -1){
+        return 1;
+      }
+
+      if(stat_file.st_size != fileSize){
+        return 1;
+      }
+
+      break;
+
+      case 1:
+
+      pos++;
+      memcpy(&fileName, &packet[pos + 1]; packet[i]);
+      i += packet[pos] + 1;
+
+      if(strcmp((char*) fileName, (char * ) settings.fileName) != 0){
+        return 1;
+      }
+      break;
+    }
+  }
+  return 0;
+}
+
+int processPacket(unsigned char * packet){
+  unsigned int pos = 0;
+  unsigned int number = 0;
+  unsigned int temp = 0;
+  uint16_t byn_number = 0;
+  unsigned char * info;
+
+  unsigned int ctrlField = packet[pos++];
+  if(ctrlField == 1){
+
+    number = packet[pos++];
+    temp = number - settings.currentNum;
+    if(temp == -254){
+      temp = 1;
+    }
+    if(temp == 1){
+      memcpy(&byn_number, &packet[pos],2);
+      pos += 2;
+
+      info = malloc(byn_number +1);
+      memset(info,0,byn_number +1);
+      memcpy(info,&packet[pos],byn_number);
+      if(writeToFile(info,byn_number) == -1){
+        printf("Error writing to file\n");
+        return -1;
+      }
+      settings.currentNum = number;
+
+      free(info);
+    }
+  }
+  else {
+    corrupted_data = -1;
+  }
+
+  return 0;
+}
+
+int writeToFile(unsigned char * info, unsigned int byn_number){
+  if(write(settings.fileDescriptor,info,byn_number) != byn_number){
+    printf("error in write! \n");
+    return -1;
+  }
+  return byn_number;
 }
 
 int createFile(char * name){
   int fd = open((char *) path, O_CREAT | O_EXCL | O_WRONLY,
-		S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+  S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 
-    return fd;
+  return fd;
 }
 
 int receiveControl(int var){
