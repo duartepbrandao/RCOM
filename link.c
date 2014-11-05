@@ -667,7 +667,7 @@ int rec_data(int fd, unsigned char * buffer) {
 								return -1;
 
 							linklayer.openLink = 0;
-							return DISCONECTED;
+							return DISCONNECTED;
 						} else {
 							unsigned int dataLength = 0;
 
