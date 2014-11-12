@@ -464,11 +464,12 @@ int llwrite(int fd, unsigned char * buffer, unsigned int length) {
 }
 
 int generate_bcc2(unsigned char * buffer, unsigned int length, unsigned char * bcc2) {
+	
 	*bcc2 = 0;
 	unsigned int i;
 
 	for (i=0 ; i<length ; i++) {
-		*bcc2 ^= buffer[i];
+	*bcc2 ^= buffer[i];
 	}
 
 	return 0;
@@ -599,7 +600,7 @@ int rec_resp_receiver(int fd, unsigned char * buffer, unsigned int length, unsig
 	return 0;
 }
 
-llread(int fd, unsigned char * buffer) {
+int llread(int fd, unsigned char * buffer) {
 	if (linklayer.flag == SENDER) {
 		printf("SENDER CANNOT READ FROM SERIAL PORT");
 		return -1;
@@ -620,17 +621,20 @@ int rec_data(int fd, unsigned char * buffer) {
 	unsigned char stuffed_buffer[MAX_SIZE];
 	int i = START_FLAG;
 	STOP = FALSE;
-
+	
 	while (STOP == FALSE) {
 		unsigned char c = 0;
-
+		//printf("start while \n");
 		if (read(fd, &c, 1)) {
+			//printf("received a: %x\n",c);
 			switch (i) {
 				case START_FLAG:
+					//printf("start\n");
 					if (c == FLAG)
 						i = ADDR;
 					break;
 				case ADDR:
+//printf("adr\n");
 					if (c == ADDR_TRANS) {
 						addr = c;
 						i = CTRL;
@@ -639,6 +643,7 @@ int rec_data(int fd, unsigned char * buffer) {
 					}
 					break;
 				case CTRL:
+					//printf("ctrl\n");
 					if (c == NEXT_CTRL_INDEX(linklayer.sequenceNumber) || c == CTRL_DISC) {
 						ctrl = c;
 						i = BCC1;
@@ -649,6 +654,7 @@ int rec_data(int fd, unsigned char * buffer) {
 					}
 					break;
 				case BCC1:
+					//printf("bcc1\n");
 					;
 					int headerErrorProb = rand() % 100;
 
@@ -665,48 +671,64 @@ int rec_data(int fd, unsigned char * buffer) {
 					}
 					break;
 				case DATA:
+					//printf("data\n");
 					if (c != FLAG) {
+
 						stuffed_buffer[dataCount] = c;
+//printf("stuffed: %x\n",stuffed_buffer[dataCount]);
 						dataCount++;
 					} else {
+//printf("else\n");
 						if (ctrl == CTRL_DISC) {
+							printf("send disc\n");
 							if (send_disc(fd, RECEIVER))
 								return -1;
+							printf("rec ua\n");
 							if (rec_ua(fd, RECEIVER))
 								return -1;
 
 							linklayer.openLink = 0;
 							return DISCONECTED;
 						} else {
+							//printf("else data lenght\n");
 							unsigned int dataLength = 0;
-
+							
+							//printf("data count: %d",dataCount);
 							if ((dataLength = byteDestuffing(stuffed_buffer, dataCount, buffer)) == -1)
 								return -1;
 
 							unsigned char bcc2_received = buffer[dataLength - 1];
+							//printf("bcc2 received: %x\n", bcc2_received);
 							unsigned char bcc2 = 0;
+							//printf("bcc2\n");
 
 							generate_bcc2(buffer, dataLength - 1, &bcc2);
-
+							//printf("bcc generated: %x\n",bcc2);
 							int frameErrorProb = rand() % 100;
 
 							if (frameErrorProb < linklayer.fer) {
+								printf("send rej\n");
 								send_rej(fd);
 								i = START_FLAG;
 								dataCount = 0;
 							} else {
+								//printf("else bcc2\n");
 								if (bcc2 == bcc2_received) {
+									printf("same bcc2\n");
 									if (ctrl != NEXT_CTRL_INDEX(linklayer.sequenceNumber)) {
+										printf("send rr1\n");
 										send_rr(fd);
 										i = START_FLAG;
 										dataCount = 0;
 									} else {
+										printf("send rr 2\n");
 										linklayer.sequenceNumber = NEXT_INDEX(linklayer.sequenceNumber);
 										send_rr(fd);
 
 										return (dataLength - 1);
 									}
 								} else {
+									printf("not the same bcc2\n");
 									if (ctrl != NEXT_CTRL_INDEX(linklayer.sequenceNumber))
 										send_rr(fd);
 									else
@@ -722,20 +744,20 @@ int rec_data(int fd, unsigned char * buffer) {
 			}
 		}
 	}
-
+	printf("return\n");
 	return 0;
 }
 
 int byteDestuffing(unsigned char * buffer, unsigned int length, unsigned char * new_buffer) {
 	unsigned int destuff_pos = 0;
-	unsigned int i;
-
-	for (i=0 ; i<length ; i++) {
+	unsigned int i = 0;
+	//printf("started destuffing lenght: %d\n",length);
+	for (; i<length ; i++) {
+		//printf("buffer\n");
 		char c = buffer[i];
-
 		if (c == OCTET_ESCAPE) {
 			c = buffer[++i];
-
+			
 			if (c == (FLAG ^ OCTET_DIFF)) {
 				new_buffer[destuff_pos++] = FLAG;
 			} else if (OCTET_ESCAPE ^ OCTET_DIFF) {
@@ -747,7 +769,8 @@ int byteDestuffing(unsigned char * buffer, unsigned int length, unsigned char * 
 		} else {
 			new_buffer[destuff_pos++] = c;
 		}
-	}
+	//printf("destuffed a %x to a %x\n",buffer[i],c);	
+}
 
 	return destuff_pos;
 }
