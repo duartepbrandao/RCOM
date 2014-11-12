@@ -1,9 +1,13 @@
 #ifndef DEFINITIONS_H_
 #define DEFINITIONS_H_
 
+#include <linux/limits.h>
+#include <stdint.h>
 #define SENDER 1
 #define RECEIVER 2
 #define EXIT 3
+#define PACKET_MAX_SIZE 65535
+#define MAX_STRING_SIZE 10000
 
 #define FLAG 0x7E
 #define ADDR_TRANS 0x03
@@ -27,5 +31,7 @@
 #define NEXT_CTRL_INDEX(num) (num << 1)
 #define CTRL_REC_READY(num) ((num << 5) | 0x05)
 #define CTRL_REC_REJECT(num) ((num << 1) | 0x01)
+
+#define DISCONECTED -50
 
 #endif

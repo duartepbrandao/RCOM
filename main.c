@@ -9,5 +9,5 @@ int main(int argc, char argv[]) {
 
 	startApp();
 
-	return EXIT_SUCESS;
+	return 1;
 }
