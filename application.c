@@ -12,7 +12,6 @@ int setup() {
 	//need to setup status(sender/receiver), port, timeout and retries
 
 	settings.status = cliStatus();
-
 	while (settings.status != EXIT) {
 		settings.port = cliPort();
 		setBR(cliBaudrate());
@@ -43,19 +42,19 @@ int receiveFile() {
 	}
 
 	receiveControl(2);
-
+	printf("Name: %s\n",settings.name);
 	if ((settings.fileDescriptor = createFile(settings.name)) == -1) {
 		printf("error creating file!\n");
 		return -1;
 	}
-
+	
 	int value = 0;
 	int last_size = 0;
 	unsigned char packet[PACKET_MAX_SIZE];
 
 	while (TRUE) {
 		value = llread(settings.serialPortDescriptor, packet);
-		if (value == DISCONNECTED) {
+		if (value == DISCONECTED) {
 			if (verifyFile(packet, last_size)) {
 				printf("Error receiving packets!\n");
 			}
@@ -131,7 +130,7 @@ int processPacket(unsigned char * packet) {
 	unsigned int pos = 0;
 	unsigned int number = 0;
 	unsigned int temp = 0;
-	uint16_t byn_number = 0;
+	unsigned int size = 0;
 	unsigned char * info;
 
 	unsigned int ctrlField = packet[pos++];
@@ -143,13 +142,14 @@ int processPacket(unsigned char * packet) {
 			temp = 1;
 		}
 		if (temp == 1) {
-			memcpy(&byn_number, &packet[pos], 2);
-			pos += 2;
+			size = packet[pos++]*256;
+			size += packet[pos++];
 
-			info = malloc(byn_number + 1);
-			memset(info, 0, byn_number + 1);
-			memcpy(info, &packet[pos], byn_number);
-			if (writeToFile(info, byn_number) == -1) {
+			info = malloc(size + 1);
+			memset(info, 0, size + 1);
+			memcpy(info, &packet[pos], size);
+			
+			if (writeToFile(info, size) == -1) {
 				printf("Error writing to file\n");
 				return -1;
 			}
@@ -157,9 +157,9 @@ int processPacket(unsigned char * packet) {
 
 			free(info);
 		}
-	} else {
+	}/* else {
 		corrupted_data = -1;
-	}
+	}*/
 
 	return 0;
 }
@@ -204,12 +204,15 @@ int receiveControl(int var) {
 			memcpy(&settings.fileSize, &packet[pos + 1], packet[pos]
 			);
 			pos += sizeof(unsigned int) + 1;
+			printf("Filesize %d\n",settings.fileSize);
 			break;
 		case 1:
 			pos++;
 			memcpy(&settings.name, &packet[pos + 1],
 					packet[pos]);
 			pos += strlen((char *) settings.name) + 2;
+
+			printf("Filename %s\n",settings.name);
 			break;
 		}
 	}
