@@ -12,6 +12,7 @@ int setup() {
 	//need to setup status(sender/receiver), port, timeout and retries
 
 	settings.status = cliStatus();
+
 	while (settings.status != EXIT) {
 		settings.port = cliPort();
 		setBR(cliBaudrate());
@@ -42,12 +43,13 @@ int receiveFile() {
 	}
 
 	receiveControl(2);
+
 	printf("Name: %s\n",settings.name);
 	if ((settings.fileDescriptor = createFile(settings.name)) == -1) {
 		printf("error creating file!\n");
 		return -1;
 	}
-	
+
 	int value = 0;
 	int last_size = 0;
 	unsigned char packet[PACKET_MAX_SIZE];
@@ -222,7 +224,6 @@ int receiveControl(int var) {
 int sendFile() {
 	settings.serialPortDescriptor = llopen(settings.port,
 			settings.status);
-
 	if (settings.serialPortDescriptor == -1) {
 		perror("error opening link!!\n\n");
 		close(settings.fileDescriptor);
@@ -234,17 +235,19 @@ int sendFile() {
 		close(settings.fileDescriptor);
 		return -1;
 	}
-
+	printf("control returned!\n");
 	int stop = 0;
 	unsigned char* packet = malloc(settings.packetSize);
 	unsigned int size = 0;
 
 	while (!stop) {
+		printf("read!\n");
 		size = read(settings.fileDescriptor, packet,
 				settings.packetSize);
 		if (size != settings.packetSize) {
 			stop = -1;
 		}
+	printf("PACKET SIZE :%d\n",size);
 		if (sendPacket(packet, size) == -1) {
 			printf("Error transmiting packet \n");
 			close(settings.fileDescriptor);
@@ -270,9 +273,9 @@ int sendPacket(unsigned char * message, unsigned int size) {
 	settings.currentNum = (settings.currentNum % 255) + 1;
 	packet[pos++] = settings.currentNum;
 
-	uint16_t temp = size;
-	pos += 2;
-	memcpy(&packet[pos], message, temp);
+	packet[pos++] = size/256;
+	packet[pos++] = size%256;
+	memcpy(&packet[pos], message, size);
 	return llwrite(settings.serialPortDescriptor, packet,
 			(size + 4));
 }
@@ -298,6 +301,7 @@ int sendControl(int var) {
 	memcpy(&packet[size], &settings.name,
 			strlen((char *) settings.name) + 1);
 	size += strlen((char *) settings.name) + 1;
+	printf("filename: %s\n",settings.name);
 	return llwrite(settings.serialPortDescriptor, packet, size);
 
 }
@@ -371,14 +375,17 @@ char* cliChooseFile() {
 	fgets((char *) path, PATH_MAX, stdin);
 	path[strlen((char *) path) - 1] = '\0';
 	printf("%s\n", path);
-
 	while (validPath(path)) {
 		memset(path, 0, PATH_MAX);
 		fgets((char *) path, PATH_MAX, stdin);
 		path[strlen((char *) path) - 1] = '\0';
 		printf("Invalid path!");
 	}
-
+struct stat file_stat;
+	stat((char ) path, &file_stat);
+		strcpy((char *) settings.name, basename((char *) path));
+	printf("path is valid\n");
+	printf("filename %s", settings.name);
 	return path;
 }
 

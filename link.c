@@ -260,12 +260,19 @@ int send_disc(int fd, unsigned int flag) {
 	return 0;
 }
 
+void setAlarm() {
+	struct sigaction sact;
+	sact.sa_flags = 0;
+	sact.sa_handler = alarmListener;
+	sigaction(SIGALRM, &sact, NULL);
+	alarm(linklayer.timeout);
+	alarmFlag = 0;
+	alarmCount = 0;
+}
+
 int rec_disc(int fd, unsigned int flag) {
 	if (flag == SENDER) {
-		(void) signal(SIGALRM, alarmListener);
-		alarm(linklayer.timeout);
-		alarmFlag = 1;
-		alarmCount = 0;
+		setAlarm();
 	}
 
 	unsigned char addr = 0;
@@ -282,9 +289,10 @@ int rec_disc(int fd, unsigned int flag) {
 				printf("EXCEDED NUMBER OF TRIES\n");
 				close_port_file(fd);
 				return -1;
-			} else if (alarmFlag == 0) {
+			} else if (alarmFlag == 1) {
+				printf("RE-SEND DISC!!!\n");
 				send_disc(fd, flag);
-				alarmFlag = 1;
+				alarmFlag = 0;
 				alarm(linklayer.timeout);
 			}
 		}
@@ -337,16 +345,13 @@ int rec_disc(int fd, unsigned int flag) {
 }
 
 void alarmListener() {
+	printf("TIMEOUT!!!\n");
 	alarmFlag = 1;
 	alarmCount++;
 }
 
 int rec_ua(int fd, unsigned int flag) {
-	(void) signal(SIGALRM, alarmListener);
-	alarm(linklayer.timeout);
-
-	alarmFlag = 1;
-	alarmCount = 0;
+	setAlarm();
 
 	unsigned int addr = 0;
 	unsigned int ctrl = 0;
@@ -361,17 +366,17 @@ int rec_ua(int fd, unsigned int flag) {
 			printf("EXCEDED NUMBER OF TRIES!\n");
 			close_port_file(fd);
 			return -1;
-		} else if (alarmFlag == 0) {
+		} else if (alarmFlag == 1) {
+			printf("RE-SEND UA!!!\n");
 			if (flag == SENDER) {
 				send_set(fd);
 			} else if (flag == RECEIVER) {
 				send_disc(fd, flag);
 			}
 
-			alarmFlag = 1;
+			alarmFlag = 0;
 			alarm(linklayer.timeout);
 		}
-
 		if (read(fd, &c, 1)) {
 			switch (i) {
 				case START_FLAG:
@@ -415,7 +420,6 @@ int rec_ua(int fd, unsigned int flag) {
 			}
 		}
 	}
-
 	return 0;
 }
 
@@ -429,12 +433,12 @@ int llwrite(int fd, unsigned char * buffer, unsigned int length) {
 		printf("SERIAL PORT ISNT INITIALIZED\n");
 		return -1;
 	}
-
 	unsigned char bcc2 = 0;
 	generate_bcc2(buffer, length, &bcc2);
 
 	unsigned char aux_buffer[MAX_SIZE] = "";
 	memcpy(aux_buffer, buffer, length);
+	printf("bcc2 wrote: %x\n",bcc2);
 	aux_buffer[length] = bcc2;
 
 	unsigned char * stuffed_buffer = malloc(MAX_SIZE);
@@ -444,10 +448,10 @@ int llwrite(int fd, unsigned char * buffer, unsigned int length) {
 		printf("BYTE STUFFING ERROR\n");
 		return -1;
 	}
-
 	int nbytes = 0;
+	printf("sending data!\n");
 	nbytes = send_data(fd, stuffed_buffer, stuffed_length);
-
+	printf("wrote: %d bytes",nbytes);
 	if (rec_resp_receiver(fd, stuffed_buffer, stuffed_length, bcc2) == -1) {
 		printf("\n");
 		return -1;
@@ -484,6 +488,7 @@ int byteStuffing(unsigned char * buffer, unsigned int length, unsigned char * ne
 		} else {
 			new_buffer[buff_pos++] = c;
 		}
+//		printf("stuffed a %x to a %x \n",buffer[i],c);
 	}
 
 	return buff_pos;
@@ -495,23 +500,26 @@ int send_data(int fd, unsigned char * buffer, unsigned int length) {
 	unsigned char ctrl = NEXT_CTRL_INDEX(linklayer.sequenceNumber);
 	unsigned char bcc1 = addr ^ ctrl;
 
+	printf("writing!!\n");
 	write(fd, &flag, 1);
 	write(fd, &addr, 1);
 	write(fd, &ctrl, 1);
 	write(fd, &bcc1, 1);
-	write(fd, &buffer, length);
+	write(fd, buffer, length);
 	write(fd, &flag, 1);
-
+	printf("sender wrote: %x %x %x %x data %x\n",flag,addr,ctrl,bcc1,flag);
+	/*printf("data: ");
+	int indice;
+	for(indice=0;indice<length;indice++) {
+		printf("%x",buffer[indice]);
+ 	}
+	printf("\n");*/
 	return (length+5);
 }
 
 
 int rec_resp_receiver(int fd, unsigned char * buffer, unsigned int length, unsigned char bcc2) {
-	(void) signal(SIGALRM, alarmListener);
-	alarm(linklayer.timeout);
-
-	alarmFlag = 1;
-	alarmCount = 0;
+	setAlarm();
 
 	unsigned char addr = 0;
 	unsigned char ctrl = 0;
@@ -526,9 +534,10 @@ int rec_resp_receiver(int fd, unsigned char * buffer, unsigned int length, unsig
 			printf("EXCEDED NUMBER OF TRIES\n");
 			close_port_file(fd);
 			return -1;
-		} else if (alarmFlag == 0) {
+		} else if (alarmFlag == 1) {
+			printf("RE-SEND RR!!!\n");
 			send_data(fd, buffer, length);
-			alarmFlag = 1;
+			alarmFlag = 0;
 			alarm(linklayer.timeout);
 		}
 
@@ -679,7 +688,6 @@ int rec_data(int fd, unsigned char * buffer) {
 								return -1;
 
 							linklayer.openLink = 0;
-							printf("return\n");
 							return DISCONECTED;
 						} else {
 							//printf("else data lenght\n");
