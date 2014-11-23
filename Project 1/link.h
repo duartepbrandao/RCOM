@@ -13,6 +13,7 @@ typedef struct linkLayer {
 	unsigned int fer;
 } linkLayer_t;
 
+void setAlarm();
 int llopen(unsigned int port, unsigned int flag);
 int llwrite(int fd, unsigned char * buffer, unsigned int length);
 int llread(int fd, unsigned char * buffer);
